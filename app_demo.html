@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Variance Analyser — Portfolio Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #17171a;
+    --surface2: #1e1e23;
+    --border: #2a2a32;
+    --border2: #343440;
+    --text: #e8e8ee;
+    --text2: #9090a0;
+    --text3: #5a5a6a;
+    --accent: #7c6af7;
+    --accent2: #5b4fe0;
+    --green: #2dd4a0;
+    --green-bg: rgba(45,212,160,0.08);
+    --red: #f56565;
+    --red-bg: rgba(245,101,101,0.08);
+    --amber: #f5c842;
+    --amber-bg: rgba(245,200,66,0.08);
+    --mono: 'DM Mono', monospace;
+    --serif: 'Instrument Serif', serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* Layout */
+  .shell { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 28px 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .logo {
+    padding: 0 20px 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+
+  .logo-mark {
+    font-family: var(--serif);
+    font-size: 20px;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    font-style: italic;
+  }
+
+  .logo-mark span { color: var(--accent); font-style: normal; }
+
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .nav-section {
+    padding: 0 12px;
+    margin-bottom: 8px;
+  }
+
+  .nav-label {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0 8px;
+    margin-bottom: 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 13px;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(124,106,247,0.12); color: var(--accent); border-color: rgba(124,106,247,0.2); }
+
+  .nav-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+
+  .nav-item.active .nav-icon { opacity: 1; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--green);
+    background: var(--green-bg);
+    border: 1px solid rgba(45,212,160,0.2);
+    padding: 4px 8px;
+    border-radius: 20px;
+  }
+
+  .badge-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Main content */
+  .main { flex: 1; overflow-y: auto; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .topbar-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-style: italic;
+    color: var(--text);
+  }
+
+  .topbar-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .period-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .period-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+  .content { padding: 32px; }
+
+  /* Upload zone */
+  .upload-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .upload-card {
+    background: var(--surface);
+    border: 1px dashed var(--border2);
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-card:hover {
+    border-color: var(--accent);
+    background: rgba(124,106,247,0.05);
+  }
+
+  .upload-card.loaded {
+    border-style: solid;
+    border-color: var(--green);
+    background: var(--green-bg);
+  }
+
+  .upload-card.context-card {
+    border-style: solid;
+  }
+
+  .upload-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .upload-title {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .upload-sub {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  .upload-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+
+  .status-ok { color: var(--green); }
+  .status-wait { color: var(--text3); }
+
+  .context-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text2);
+    font-family: var(--sans);
+    font-size: 12px;
+    resize: none;
+    outline: none;
+    margin-top: 8px;
+    height: 52px;
+    line-height: 1.5;
+  }
+
+  .context-textarea::placeholder { color: var(--text3); }
+
+  /* KPI row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+
+  .kpi-card:hover { border-color: var(--border2); }
+
+  .kpi-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-family: var(--serif);
+    font-size: 26px;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .kpi-delta {
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+
+  .delta-pos { color: var(--green); }
+  .delta-neg { color: var(--red); }
+  .delta-neu { color: var(--text3); }
+
+  /* Table section */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-style: italic;
+    color: var(--text);
+  }
+
+  .section-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--mono);
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border2);
+    color: var(--text2);
+  }
+
+  .btn-ghost:hover { border-color: var(--text2); color: var(--text); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+
+  .btn-primary.loading { opacity: 0.7; cursor: not-allowed; }
+
+  /* Data table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 400;
+  }
+
+  th.num { text-align: right; }
+
+  td {
+    padding: 11px 16px;
+    font-size: 13px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody tr { transition: background 0.1s; }
+  tbody tr:hover { background: var(--surface2); }
+
+  td.num { text-align: right; font-family: var(--mono); font-size: 12px; }
+
+  td.cat-name { color: var(--text); font-weight: 500; }
+  td.sub-name { color: var(--text3); font-size: 12px; }
+
+  .var-pos {
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .var-neg {
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .var-neu {
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .flag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 2px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  .flag-material {
+    background: var(--amber-bg);
+    color: var(--amber);
+    border: 1px solid rgba(245,200,66,0.2);
+  }
+
+  .flag-ok {
+    background: transparent;
+    color: var(--text3);
+  }
+
+  /* AI Commentary section */
+  .commentary-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+
+  .commentary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .commentary-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ai-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--accent);
+    background: rgba(124,106,247,0.1);
+    border: 1px solid rgba(124,106,247,0.2);
+    padding: 3px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .commentary-title {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .commentary-body {
+    padding: 24px 28px;
+    line-height: 1.8;
+  }
+
+  .commentary-body p {
+    color: var(--text2);
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .commentary-body p:last-child { margin-bottom: 0; }
+
+  .commentary-body p strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .commentary-placeholder {
+    padding: 40px 28px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 13px;
+  }
+
+  .commentary-placeholder .ph-icon {
+    width: 36px;
+    height: 36px;
+    margin: 0 auto 12px;
+    opacity: 0.3;
+  }
+
+  /* Generating animation */
+  .generating {
+    padding: 32px 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .gen-dots {
+    display: flex;
+    gap: 5px;
+  }
+
+  .gen-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: gdot 1.2s ease-in-out infinite;
+  }
+
+  .gen-dot:nth-child(2) { animation-delay: 0.15s; }
+  .gen-dot:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes gdot { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+
+  .gen-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  /* Typewriter effect */
+  .typewriter { display: inline; }
+
+  /* Footer */
+  .page-footer {
+    padding: 20px 32px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--mono);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+
+  .download-btn:hover { border-color: var(--green); color: var(--green); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">Variance<span>AI</span></div>
+      <div class="logo-sub">Finance Analyser v1.0</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Analysis</div>
+      <div class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/>
+          <rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>
+        </svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="alert('Coming in v2 — add to your README as planned feature')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="1,12 5,7 8,9 11,5 15,8"/><path d="M11 5h4v4"/>
+        </svg>
+        Trend analysis
+      </div>
+      <div class="nav-item" onclick="alert('Coming in v2 — add to your README as planned feature')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/>
+        </svg>
+        Period comparison
+      </div>
+    </div>
+
+    <div class="nav-section" style="margin-top:12px">
+      <div class="nav-label">Reports</div>
+      <div class="nav-item" onclick="alert('Export feature — connected to Excel generator in variance_engine.py')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M13 10v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3M8 2v8M5 7l3 3 3-3"/>
+        </svg>
+        Export Excel
+      </div>
+      <div class="nav-item" onclick="alert('Board pack PDF — coming in v2')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M10 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L10 2z"/>
+          <path d="M10 2v3h3M5 9h6M5 12h4"/>
+        </svg>
+        Board pack PDF
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="badge">
+        <div class="badge-dot"></div>
+        GPT-4o connected
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">Monthly variance analysis</div>
+      <div class="topbar-meta">
+        <span>FY 2024</span>
+        <div class="period-pill" onclick="alert('Period selector — connect to date picker in production')">Jan–Jun ▾</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Upload row -->
+      <div class="upload-row">
+        <div class="upload-card loaded" id="budget-card">
+          <div class="upload-label">Input 01</div>
+          <div class="upload-title">Budget.csv</div>
+          <div class="upload-sub">6 cost centres · 6 months</div>
+          <div class="upload-status status-ok">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <polyline points="2,6 5,9 10,3"/>
+            </svg>
+            Loaded — 24 rows
+          </div>
+        </div>
+        <div class="upload-card loaded" id="actuals-card">
+          <div class="upload-label">Input 02</div>
+          <div class="upload-title">Actuals.csv</div>
+          <div class="upload-sub">6 cost centres · 6 months</div>
+          <div class="upload-status status-ok">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <polyline points="2,6 5,9 10,3"/>
+            </svg>
+            Loaded — 24 rows
+          </div>
+        </div>
+        <div class="upload-card context-card">
+          <div class="upload-label">Context (optional)</div>
+          <div class="upload-title">Business notes</div>
+          <textarea class="context-textarea" id="context-input" placeholder="e.g. Q2 headcount freeze reduced salary costs. Marketing campaign launched April.">Q2 headcount freeze reduced salary costs by approx 8%. Marketing campaign launched April drove revenue uplift. North region outperformed; South underperformed due to delayed project start.</textarea>
+        </div>
+      </div>
+
+      <!-- KPI row -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Total budget YTD</div>
+          <div class="kpi-value">£1.42m</div>
+          <div class="kpi-delta delta-neu">Jan–Jun 2024</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Total actuals YTD</div>
+          <div class="kpi-value">£1.49m</div>
+          <div class="kpi-delta delta-pos">↑ +£68,500 vs budget</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Overall variance</div>
+          <div class="kpi-value" style="color:var(--green)">+4.8%</div>
+          <div class="kpi-delta delta-pos">Favourable</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Material exceptions</div>
+          <div class="kpi-value" style="color:var(--amber)">5</div>
+          <div class="kpi-delta delta-neu">Items flagged for review</div>
+        </div>
+      </div>
+
+      <!-- Variance table -->
+      <div class="section-header">
+        <div class="section-title">Variance summary by cost centre</div>
+        <div class="section-actions">
+          <div class="btn btn-ghost" onclick="alert('Filter by material items — implement in Streamlit with st.checkbox')">Filter: material only</div>
+          <div class="btn btn-primary" id="gen-btn" onclick="generateCommentary()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9l-3 1.5.5-3.5L1 4.5 4.5 4z"/>
+            </svg>
+            Generate AI commentary
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cost centre</th>
+              <th>Category</th>
+              <th class="num">Budget YTD</th>
+              <th class="num">Actual YTD</th>
+              <th class="num">Variance £</th>
+              <th class="num">Variance %</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="variance-table">
+            <tr>
+              <td class="cat-name">Sales</td>
+              <td class="sub-name">Revenue</td>
+              <td class="num">£980,000</td>
+              <td class="num">£1,057,000</td>
+              <td class="var-pos">+£77,000</td>
+              <td class="var-pos">+7.9%</td>
+              <td><span class="flag-pill flag-material">▲ Material</span></td>
+            </tr>
+            <tr>
+              <td class="cat-name">Sales</td>
+              <td class="sub-name">Salaries</td>
+              <td class="num">£273,000</td>
+              <td class="num">£251,160</td>
+              <td class="var-pos">+£21,840</td>
+              <td class="var-pos">+8.0%</td>
+              <td><span class="flag-pill flag-material">▲ Material</span></td>
+            </tr>
+            <tr>
+              <td class="cat-name">Marketing</td>
+              <td class="sub-name">Advertising</td>
+              <td class="num">£57,500</td>
+              <td class="num">£71,200</td>
+              <td class="var-neg">−£13,700</td>
+              <td class="var-neg">−23.8%</td>
+              <td><span class="flag-pill flag-material">▼ Material</span></td>
+            </tr>
+            <tr>
+              <td class="cat-name">Operations</td>
+              <td class="sub-name">Overhead</td>
+              <td class="num">£75,000</td>
+              <td class="num">£79,500</td>
+              <td class="var-neg">−£4,500</td>
+              <td class="var-neg">−6.0%</td>
+              <td><span class="flag-pill flag-material">▼ Material</span></td>
+            </tr>
+            <tr>
+              <td class="cat-name">HR</td>
+              <td class="sub-name">Recruitment</td>
+              <td class="num">£24,000</td>
+              <td class="num">£18,400</td>
+              <td class="var-pos">+£5,600</td>
+              <td class="var-pos">+23.3%</td>
+              <td><span class="flag-pill flag-material">▲ Material</span></td>
+            </tr>
+            <tr>
+              <td class="cat-name">Finance</td>
+              <td class="sub-name">Software</td>
+              <td class="num">£12,000</td>
+              <td class="num">£11,640</td>
+              <td class="var-pos">+£360</td>
+              <td class="var-pos">+3.0%</td>
+              <td><span class="flag-pill flag-ok">On budget</span></td>
+            </tr>
+            <tr>
+              <td class="cat-name">IT</td>
+              <td class="sub-name">Infrastructure</td>
+              <td class="num">£36,000</td>
+              <td class="num">£34,200</td>
+              <td class="var-pos">+£1,800</td>
+              <td class="var-pos">+5.0%</td>
+              <td><span class="flag-pill flag-ok">On budget</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- AI Commentary box -->
+      <div class="section-header">
+        <div class="section-title">Management commentary</div>
+      </div>
+
+      <div class="commentary-box">
+        <div class="commentary-header">
+          <div class="commentary-header-left">
+            <div class="ai-chip">
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="3"/></svg>
+              GPT-4o
+            </div>
+            <div class="commentary-title">Auto-generated board pack narrative</div>
+          </div>
+          <div id="copy-btn" style="display:none">
+            <div class="btn btn-ghost" onclick="copyCommentary()">Copy text</div>
+          </div>
+        </div>
+
+        <div id="commentary-content">
+          <div class="commentary-placeholder">
+            <svg class="ph-icon" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.2">
+              <path d="M18 4l2.5 7h7l-5.5 4 2 7-6-4-6 4 2-7L8 11h7z"/>
+            </svg>
+            Click "Generate AI commentary" above to produce a professional variance narrative from your data.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="page-footer">
+      <span>VarianceAI · Portfolio demo · Built with Python + GPT-4o + Streamlit</span>
+      <a class="download-btn" href="#" onclick="alert('In production: triggers export_to_excel() from variance_engine.py')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M10 8v2a1 1 0 01-1 1H3a1 1 0 01-1-1V8M6 1v7M3.5 5.5L6 8l2.5-2.5"/>
+        </svg>
+        Download Excel report
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const commentary = `The organisation delivered a favourable overall variance of £68,500 (+4.8%) against the half-year budget of £1.42m, reflecting stronger-than-anticipated revenue performance and the benefit of the Q2 headcount freeze across sales and support functions. The result demonstrates solid cost discipline in the majority of cost centres, partially offset by planned overspend in the marketing function associated with the April campaign launch.
+
+The most significant driver of the positive outturn was Sales Revenue, which exceeded budget by £77,000 (+7.9%), consistent with the North region's outperformance noted during the period. This was further supported by a favourable salary variance of £21,840 (+8.0%) in the Sales cost centre, directly attributable to the headcount freeze which delayed two planned hires into H2. Recruitment costs in HR came in £5,600 favourable (+23.3%) for the same reason. Partially offsetting these gains, Marketing Advertising expenditure ran £13,700 over budget (−23.8%), reflecting the higher-than-planned media spend associated with the April campaign; this overspend is considered one-off in nature and management expect the cost centre to return to budget in H2.
+
+Looking ahead, the favourable revenue trend is expected to continue into Q3 provided the North region maintains current pipeline conversion rates. Management should monitor the Operations Overhead line (−6.0% adverse) which, whilst below the materiality threshold, has trended marginally adverse for three consecutive months and warrants review in the August reforecast.`;
+
+let generated = false;
+
+function generateCommentary() {
+  if (generated) return;
+  const btn = document.getElementById('gen-btn');
+  btn.classList.add('loading');
+  btn.innerHTML = `<div style="display:flex;align-items:center;gap:6px"><div style="display:flex;gap:3px" id="btn-dots"><div style="width:4px;height:4px;border-radius:50%;background:white;animation:gdot 1.2s infinite"></div><div style="width:4px;height:4px;border-radius:50%;background:white;animation:gdot 1.2s 0.15s infinite"></div><div style="width:4px;height:4px;border-radius:50%;background:white;animation:gdot 1.2s 0.3s infinite"></div></div> Generating…</div>`;
+
+  const content = document.getElementById('commentary-content');
+  content.innerHTML = `<div class="generating"><div class="gen-dots"><div class="gen-dot"></div><div class="gen-dot"></div><div class="gen-dot"></div></div><div class="gen-text">Sending variance data to GPT-4o · Writing board pack narrative…</div></div>`;
+
+  setTimeout(() => {
+    content.innerHTML = `<div class="commentary-body"><p id="typed-text"></p></div>`;
+    document.getElementById('copy-btn').style.display = 'block';
+    typeText('typed-text', commentary);
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,6 5,9 10,3"/></svg> Commentary ready`;
+    btn.style.background = 'var(--green)';
+    btn.style.borderColor = 'var(--green)';
+    btn.classList.remove('loading');
+    generated = true;
+  }, 2200);
+}
+
+function typeText(id, text) {
+  const el = document.getElementById(id);
+  const paragraphs = text.split('\n\n');
+  let pIndex = 0;
+  let cIndex = 0;
+  let fullHtml = '';
+
+  function tick() {
+    if (pIndex >= paragraphs.length) return;
+    const para = paragraphs[pIndex];
+
+    if (cIndex <= para.length) {
+      const currentPara = para.substring(0, cIndex);
+      let html = '';
+      for (let i = 0; i < pIndex; i++) {
+        html += `<p>${formatPara(paragraphs[i])}</p>`;
+      }
+      html += `<p>${formatPara(currentPara)}<span style="border-right:2px solid var(--accent);margin-left:1px;animation:pulse 0.8s infinite">&nbsp;</span></p>`;
+      el.parentElement.innerHTML = `<div class="commentary-body">${html}</div>`;
+      cIndex++;
+      setTimeout(tick, 12);
+    } else {
+      pIndex++;
+      cIndex = 0;
+      setTimeout(tick, 300);
+    }
+  }
+  tick();
+}
+
+function formatPara(text) {
+  return text.replace(/£[\d,]+/g, '<strong>$&</strong>').replace(/[+-][\d.]+%/g, '<strong>$&</strong>');
+}
+
+function copyCommentary() {
+  navigator.clipboard.writeText(commentary).then(() => {
+    const btn = document.querySelector('#copy-btn .btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy text', 2000);
+  });
+}
+</script>
+
+</body>
+</html>
