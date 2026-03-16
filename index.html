@@ -1,9 +1,807 @@
 <!DOCTYPE html>
-<html style="background:#0f0f11">
-  <head>
-    <meta http-equiv="refresh" content="0; url=app_demo.html">
-    <style>html,body{background:#0f0f11 !important;margin:0}</style>
-  </head>
-  <body style="background:#0f0f11"></body>
-</html>
+<html lang="en" style="background:#080810">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Variance Analyser — John Perez</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Epilogue:ital,wght@0,300;0,400;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+:root {
+  --bg:       #080810;
+  --bg2:      #0e0e1a;
+  --bg3:      #13131f;
+  --border:   rgba(255,255,255,0.06);
+  --border2:  rgba(255,255,255,0.1);
+  --text:     #f0f0f8;
+  --text2:    #8888a8;
+  --text3:    #44445a;
+  --accent:   #6c63ff;
+  --accent2:  #4f46e5;
+  --green:    #34d399;
+  --green-d:  rgba(52,211,153,0.1);
+  --amber:    #fbbf24;
+  --mono:     'JetBrains Mono', monospace;
+  --display:  'Syne', sans-serif;
+  --body:     'Epilogue', sans-serif;
+}
+
+html { background: var(--bg); scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(108,99,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(108,99,255,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 600px;
+  background: radial-gradient(ellipse, rgba(108,99,255,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+  background: rgba(8,8,16,0.85);
+  backdrop-filter: blur(12px);
+}
+
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-logo {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-logo span { color: var(--accent); }
+
+.nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+
+.nav-links a {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+  text-decoration: none;
+  transition: color 0.2s;
+  letter-spacing: 0.04em;
+}
+
+.nav-links a:hover { color: var(--text); }
+
+.nav-cta {
+  font-family: var(--mono) !important;
+  font-size: 12px !important;
+  background: var(--accent) !important;
+  color: white !important;
+  padding: 8px 18px !important;
+  border-radius: 6px !important;
+  transition: background 0.2s !important;
+}
+
+.nav-cta:hover { background: var(--accent2) !important; }
+
+.hero { padding: 160px 0 100px; position: relative; }
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(108,99,255,0.1);
+  border: 1px solid rgba(108,99,255,0.2);
+  padding: 5px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fadeUp 0.6s 0.1s forwards;
+}
+
+.eyebrow-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.hero-title {
+  font-family: var(--display);
+  font-size: clamp(44px, 7vw, 80px);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -2px;
+  color: var(--text);
+  margin-bottom: 24px;
+  opacity: 0;
+  animation: fadeUp 0.6s 0.2s forwards;
+}
+
+.hero-title .line2 {
+  display: block;
+  color: var(--text2);
+  font-weight: 400;
+  font-style: italic;
+  font-family: var(--body);
+  font-size: clamp(32px, 5vw, 58px);
+  letter-spacing: -1px;
+}
+
+.hero-title .accent-word { color: var(--accent); }
+
+.hero-desc {
+  font-size: 17px;
+  color: var(--text2);
+  max-width: 560px;
+  line-height: 1.7;
+  margin-bottom: 40px;
+  font-weight: 300;
+  opacity: 0;
+  animation: fadeUp 0.6s 0.3s forwards;
+}
+
+.hero-desc strong { color: var(--text); font-weight: 400; }
+
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  opacity: 0;
+  animation: fadeUp 0.6s 0.4s forwards;
+}
+
+.btn-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: white;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 14px 28px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid var(--accent);
+}
+
+.btn-main:hover { background: var(--accent2); border-color: var(--accent2); transform: translateY(-1px); }
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 14px 28px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid var(--border2);
+}
+
+.btn-outline:hover { color: var(--text); border-color: var(--text2); transform: translateY(-1px); }
+
+.stat-strip {
+  display: flex;
+  margin-top: 72px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg2);
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeUp 0.6s 0.5s forwards;
+}
+
+.stat { flex: 1; padding: 24px 28px; border-right: 1px solid var(--border); }
+.stat:last-child { border-right: none; }
+
+.stat-value {
+  font-family: var(--display);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 6px;
+  letter-spacing: -1px;
+}
+
+.stat-value .unit { font-size: 18px; color: var(--accent); }
+
+.stat-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+section { padding: 100px 0; }
+
+.section-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: var(--display);
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--text);
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+
+.section-sub {
+  font-size: 16px;
+  color: var(--text2);
+  font-weight: 300;
+  max-width: 520px;
+  line-height: 1.7;
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 56px;
+}
+
+.problem-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  transition: border-color 0.2s;
+}
+
+.problem-card:hover { border-color: var(--border2); }
+.problem-card.highlight { border-color: rgba(108,99,255,0.3); background: rgba(108,99,255,0.05); }
+
+.card-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+}
+
+.icon-red { background: rgba(239,68,68,0.1); color: #ef4444; }
+.icon-green { background: var(--green-d); color: var(--green); }
+.icon-amber { background: rgba(251,191,36,0.1); color: var(--amber); }
+.icon-purple { background: rgba(108,99,255,0.1); color: var(--accent); }
+
+.card-title {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
+}
+
+.card-body { font-size: 14px; color: var(--text2); line-height: 1.6; font-weight: 300; }
+
+.how-section { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin-top: 56px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.step { padding: 32px 28px; border-right: 1px solid var(--border); }
+.step:last-child { border-right: none; }
+
+.step-num { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.1em; margin-bottom: 16px; }
+
+.step-title {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+
+.step-body { font-size: 13px; color: var(--text2); line-height: 1.6; font-weight: 300; }
+
+.step-tech { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+
+.tech-pill {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.output-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 56px;
+}
+
+.output-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+
+.traffic-lights { display: flex; gap: 6px; }
+.tl { width: 10px; height: 10px; border-radius: 50%; }
+.tl-r { background: #ef4444; opacity: 0.5; }
+.tl-y { background: var(--amber); opacity: 0.5; }
+.tl-g { background: var(--green); opacity: 0.5; }
+
+.output-filename { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+.output-body { padding: 28px 32px; }
+
+.output-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.output-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.output-text { font-size: 14px; color: var(--text2); line-height: 1.8; font-style: italic; font-weight: 300; }
+.output-text strong { color: var(--text); font-style: normal; font-weight: 400; }
+
+.skills-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 56px; }
+
+.skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: border-color 0.2s;
+}
+
+.skill-row:hover { border-color: var(--border2); }
+
+.skill-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex-shrink: 0; }
+
+.skill-area { font-family: var(--display); font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.skill-detail { font-size: 13px; color: var(--text2); font-weight: 300; line-height: 1.5; }
+
+.stack-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 40px; }
+
+.stack-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.stack-badge:hover { border-color: var(--border2); color: var(--text); }
+.stack-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+.cta-section { text-align: center; padding: 100px 0; position: relative; }
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px; height: 400px;
+  background: radial-gradient(ellipse, rgba(108,99,255,0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cta-title {
+  font-family: var(--display);
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  color: var(--text);
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+
+.cta-sub { font-size: 16px; color: var(--text2); font-weight: 300; margin-bottom: 36px; }
+
+.cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+footer { border-top: 1px solid var(--border); padding: 32px 0; }
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-left { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+.footer-right { display: flex; gap: 20px; }
+
+.footer-right a {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-right a:hover { color: var(--text2); }
+
+.divider { height: 1px; background: var(--border); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 768px) {
+  .problem-grid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .step { border-right: none; border-bottom: 1px solid var(--border); }
+  .step:last-child { border-bottom: none; }
+  .skills-grid { grid-template-columns: 1fr; }
+  .stat-strip { flex-direction: column; }
+  .stat { border-right: none; border-bottom: 1px solid var(--border); }
+  .stat:last-child { border-bottom: none; }
+  .nav-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">Variance<span>AI</span></a>
+    <ul class="nav-links">
+      <li><a href="#problem">Problem</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#output">Output</a></li>
+      <li><a href="#skills">Skills</a></li>
+      <li><a href="app_demo.html" class="nav-cta">Live demo →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-eyebrow">
+      <div class="eyebrow-dot"></div>
+      Finance AI · Portfolio project
+    </div>
+    <h1 class="hero-title">
+      AI Variance<br>
+      <span class="line2">Analysis <span class="accent-word">Automator</span></span>
+    </h1>
+    <p class="hero-desc">
+      Eliminates <strong>2–4 hours of manual work</strong> per reporting cycle. Upload budget and actuals — get a complete variance table, material exception flags, and a <strong>GPT-4o board pack narrative</strong> in under 30 seconds.
+    </p>
+    <div class="hero-actions">
+      <a href="app_demo.html" class="btn-main">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="3,1 13,7 3,13"/></svg>
+        View live demo
+      </a>
+      <a href="https://github.com/johnperezlondon-star/variance-analyser" target="_blank" class="btn-outline">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M7 0C3.13 0 0 3.13 0 7c0 3.09 2.01 5.72 4.79 6.65.35.06.48-.15.48-.34v-1.2C3.26 12.52 2.86 11.37 2.86 11.37c-.32-.81-.78-1.03-.78-1.03-.64-.44.05-.43.05-.43.71.05 1.08.73 1.08.73.63 1.08 1.65.77 2.05.59.06-.46.25-.77.45-.95C4.18 10.14 2.64 9.6 2.64 6.84c0-.77.28-1.4.73-1.89-.07-.18-.32-.9.07-1.87 0 0 .59-.19 1.94.72A6.76 6.76 0 017 3.52c.6 0 1.2.08 1.76.23 1.35-.91 1.94-.72 1.94-.72.39.97.14 1.69.07 1.87.46.49.73 1.12.73 1.89 0 2.77-1.55 3.3-3.02 3.47.24.2.45.6.45 1.21v1.79c0 .19.13.41.48.34C11.99 12.72 14 10.09 14 7c0-3.87-3.13-7-7-7z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+
+    <div class="stat-strip">
+      <div class="stat">
+        <div class="stat-value">2–4<span class="unit">hrs</span></div>
+        <div class="stat-label">Saved per cycle</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">&lt;30<span class="unit">s</span></div>
+        <div class="stat-label">To full output</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">GPT<span class="unit" style="font-size:14px">-4o</span></div>
+        <div class="stat-label">AI model used</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">3<span class="unit" style="font-size:14px">×</span></div>
+        <div class="stat-label">Output formats</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section id="problem">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="section-tag">The problem</div>
+      <h2 class="section-title">Month-end is still manual</h2>
+      <p class="section-sub">Finance teams spend hours every cycle doing work that can be automated. This tool targets the most time-consuming part of variance reporting.</p>
+    </div>
+    <div class="problem-grid reveal">
+      <div class="problem-card">
+        <div class="card-icon icon-red">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 11h.01"/></svg>
+        </div>
+        <div class="card-title">Manual commentary writing</div>
+        <div class="card-body">Controllers manually read variance tables, identify the top movers, apply business context, and write prose commentary for every line — every single month.</div>
+      </div>
+      <div class="problem-card highlight">
+        <div class="card-icon icon-green">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,8 6,12 14,4"/></svg>
+        </div>
+        <div class="card-title">What this tool does instead</div>
+        <div class="card-body">Upload two CSVs. The pipeline calculates all variances, flags material exceptions, sends structured data to GPT-4o, and returns board-pack-ready prose in under 30 seconds.</div>
+      </div>
+      <div class="problem-card">
+        <div class="card-icon icon-amber">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2L10 6h4L11 9l1.5 4L8 11l-4.5 2L5 9 2 6h4z"/></svg>
+        </div>
+        <div class="card-title">AI prompt engineering</div>
+        <div class="card-body">The GPT-4o prompt specifies tone, format, and only passes flagged variances — producing tight, accurate, professional commentary every time at low API cost.</div>
+      </div>
+      <div class="problem-card">
+        <div class="card-icon icon-purple">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h6M5 10h4"/></svg>
+        </div>
+        <div class="card-title">Finance domain knowledge</div>
+        <div class="card-body">Materiality thresholds mirror real controller judgement (&gt;5% or &gt;£5,000). The tool understands favourable vs adverse, cost centre structure, and board pack conventions.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section id="how" class="how-section">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="section-tag">Architecture</div>
+      <h2 class="section-title">Three-stage pipeline</h2>
+      <p class="section-sub">Clean separation between data processing, AI generation, and output delivery — each module independently testable and replaceable.</p>
+    </div>
+    <div class="steps reveal">
+      <div class="step">
+        <div class="step-num">01 / Data layer</div>
+        <div class="step-title">Pandas engine</div>
+        <div class="step-body">Ingests budget and actuals CSVs, melts wide-to-long format, merges on cost centre + category, calculates variances, flags material exceptions.</div>
+        <div class="step-tech">
+          <span class="tech-pill">pandas</span>
+          <span class="tech-pill">openpyxl</span>
+          <span class="tech-pill">python</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02 / AI layer</div>
+        <div class="step-title">GPT-4o narrative</div>
+        <div class="step-body">Passes only flagged variances to GPT-4o with a structured finance prompt. Temperature 0.3 for consistent professional tone. Returns three-paragraph management commentary.</div>
+        <div class="step-tech">
+          <span class="tech-pill">openai api</span>
+          <span class="tech-pill">prompt eng.</span>
+          <span class="tech-pill">gpt-4o</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03 / Output layer</div>
+        <div class="step-title">Multi-format delivery</div>
+        <div class="step-body">Exports formatted Excel workbook with conditional formatting, delivers commentary text, and surfaces everything via an interactive Streamlit web application.</div>
+        <div class="step-tech">
+          <span class="tech-pill">streamlit</span>
+          <span class="tech-pill">excel</span>
+          <span class="tech-pill">openpyxl</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section id="output">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="section-tag">Sample output</div>
+      <h2 class="section-title">What the AI writes</h2>
+      <p class="section-sub">Given a variance table with flagged exceptions, GPT-4o produces commentary that reads exactly like a senior financial controller wrote it.</p>
+    </div>
+    <div class="output-box reveal">
+      <div class="output-header">
+        <div class="traffic-lights">
+          <div class="tl tl-r"></div>
+          <div class="tl tl-y"></div>
+          <div class="tl tl-g"></div>
+        </div>
+        <div class="output-filename">management_commentary_jan_jun_2024.txt — generated by GPT-4o</div>
+      </div>
+      <div class="output-body">
+        <div class="output-label">Auto-generated board pack narrative</div>
+        <div class="output-text">
+          <p>The organisation delivered a <strong>favourable overall variance of £68,500 (+4.8%)</strong> against the half-year budget of £1.42m, reflecting stronger-than-anticipated revenue performance and the benefit of the Q2 headcount freeze across sales and support functions.</p>
+          <br>
+          <p>The most significant driver was <strong>Sales Revenue, which exceeded budget by £77,000 (+7.9%)</strong>, consistent with North region outperformance. This was further supported by a favourable salary variance of <strong>£21,840 (+8.0%)</strong>, directly attributable to the headcount freeze. Partially offsetting these gains, <strong>Marketing Advertising ran £13,700 over budget (−23.8%)</strong> due to the April campaign launch.</p>
+          <br>
+          <p>Looking ahead, the favourable revenue trend is expected to continue into Q3. Management should monitor the <strong>Operations Overhead line (−6.0% adverse)</strong> which has trended marginally adverse for three consecutive months and warrants review in the August reforecast.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section id="skills">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="section-tag">Skills demonstrated</div>
+      <h2 class="section-title">What this project shows</h2>
+      <p class="section-sub">Built to demonstrate the intersection of finance domain expertise and modern AI automation skills — the combination most in-demand for transformation roles.</p>
+    </div>
+    <div class="skills-grid reveal">
+      <div class="skill-row">
+        <div class="skill-dot"></div>
+        <div>
+          <div class="skill-area">Finance domain</div>
+          <div class="skill-detail">Variance analysis · Management accounts · Materiality thresholds · Board pack conventions · Controller judgement</div>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-dot" style="background:var(--green)"></div>
+        <div>
+          <div class="skill-area">Python / data engineering</div>
+          <div class="skill-detail">Pandas pipeline · CSV ingestion · Wide-to-long transformation · Aggregation · Conditional flagging logic</div>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-dot" style="background:var(--amber)"></div>
+        <div>
+          <div class="skill-area">AI / prompt engineering</div>
+          <div class="skill-detail">GPT-4o API integration · Structured prompt design · Temperature tuning · Output consistency at scale</div>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-dot" style="background:#f472b6"></div>
+        <div>
+          <div class="skill-area">Product / UI</div>
+          <div class="skill-detail">Streamlit web app · File upload handling · Dynamic table rendering · Excel export with conditional formatting</div>
+        </div>
+      </div>
+    </div>
+    <div class="stack-row reveal">
+      <div class="stack-badge"><div class="stack-dot" style="background:#3776ab"></div>Python 3.10</div>
+      <div class="stack-badge"><div class="stack-dot" style="background:#412991"></div>OpenAI GPT-4o</div>
+      <div class="stack-badge"><div class="stack-dot" style="background:#150458"></div>Pandas</div>
+      <div class="stack-badge"><div class="stack-dot" style="background:#ff4b4b"></div>Streamlit</div>
+      <div class="stack-badge"><div class="stack-dot" style="background:#217346"></div>Excel / openpyxl</div>
+      <div class="stack-badge"><div class="stack-dot" style="background:#f34f29"></div>GitHub Pages</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="cta-section">
+  <div class="wrap">
+    <div class="reveal">
+      <h2 class="cta-title">See it in action</h2>
+      <p class="cta-sub">Open the interactive demo — sample data pre-loaded, no setup required.</p>
+      <div class="cta-actions">
+        <a href="app_demo.html" class="btn-main">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="3,1 13,7 3,13"/></svg>
+          Open live demo
+        </a>
+        <a href="https://github.com/johnperezlondon-star/variance-analyser" target="_blank" class="btn-outline">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M7 0C3.13 0 0 3.13 0 7c0 3.09 2.01 5.72 4.79 6.65.35.06.48-.15.48-.34v-1.2C3.26 12.52 2.86 11.37 2.86 11.37c-.32-.81-.78-1.03-.78-1.03-.64-.44.05-.43.05-.43.71.05 1.08.73 1.08.73.63 1.08 1.65.77 2.05.59.06-.46.25-.77.45-.95C4.18 10.14 2.64 9.6 2.64 6.84c0-.77.28-1.4.73-1.89-.07-.18-.32-.9.07-1.87 0 0 .59-.19 1.94.72A6.76 6.76 0 017 3.52c.6 0 1.2.08 1.76.23 1.35-.91 1.94-.72 1.94-.72.39.97.14 1.69.07 1.87.46.49.73 1.12.73 1.89 0 2.77-1.55 3.3-3.02 3.47.24.2.45.6.45 1.21v1.79c0 .19.13.41.48.34C11.99 12.72 14 10.09 14 7c0-3.87-3.13-7-7-7z"/></svg>
+          Browse the code
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">Built by John Perez · Finance AI Portfolio · 2024</div>
+    <div class="footer-right">
+      <a href="https://github.com/johnperezlondon-star" target="_blank">GitHub</a>
+      <a href="app_demo.html">Live demo</a>
+      <a href="https://github.com/johnperezlondon-star/variance-analyser" target="_blank">Source code</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
